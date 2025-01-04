@@ -1,0 +1,151 @@
+<!-- templates/chat.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LLMActivityWatch Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #chat-container {
+            width: 80%;
+            margin: auto;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+        }
+        .message {
+            margin-bottom: 15px;
+        }
+        .user {
+            text-align: right;
+            color: blue;
+        }
+        .assistant {
+            text-align: left;
+            color: green;
+        }
+        .system {
+            text-align: center;
+            color: gray;
+            font-style: italic;
+        }
+        #input-container {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex: 1;
+        }
+        #end-chat-buttons {
+            margin-top: 10px;
+        }
+        .warning {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="chat-container">
+        <h1>LLMActivityWatch Chat</h1>
+
+        <!-- Warning if knowledge base has >=9 entries -->
+        {% if knowledge_count == 9 %}
+        <p class="warning">Memory limit reached (9 entries). Any new summary cannot be saved unless you remove old ones.</p>
+        {% endif %}
+
+        <div id="messages">
+            {% for speaker, message in conversation_history %}
+            <div class="message {{ speaker|lower }}">
+                <strong>{{ speaker }}:</strong> {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        <div id="input-container">
+            <input type="text" id="message-input" placeholder="Type your message here..." autofocus />
+            <button id="send-button">Send</button>
+        </div>
+
+        <div id="end-chat-buttons">
+            <!-- "No Saving" -->
+            <form action="{{ url_for('end_chat_no_save') }}" method="post" style="display:inline-block;">
+                <button type="submit" id="end-chat-no-save">End Chat (No Saving)</button>
+            </form>
+            <!-- "Save to Memory" -->
+            <form action="{{ url_for('end_chat_save') }}" method="post" style="display:inline-block;">
+                <button type="submit" id="end-chat-save">End Chat (Save to Memory)</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Initialize WebSocket
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var messages = document.getElementById('messages');
+        var messageInput = document.getElementById('message-input');
+        var sendButton = document.getElementById('send-button');
+
+        function addMessageToChat(speaker, message, speakerClass) {
+            var newMessage = document.createElement('div');
+            newMessage.className = "message " + speakerClass;
+            newMessage.innerHTML = "<strong>" + speaker + ":</strong> " + message;
+            messages.appendChild(newMessage);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // User message
+        function sendMessage() {
+            var message = messageInput.value.trim();
+            if (message !== '') {
+                addMessageToChat('User', message, 'user');
+
+                socket.emit('user_message', { 'message': message });
+                messageInput.value = '';
+            }
+        }
+
+        sendButton.onclick = sendMessage;
+
+        messageInput.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Assistant message
+        socket.on('assistant_message', function(data) {
+            console.log("Received assistant message:", data.message);
+            if (data && data.message) {
+                addMessageToChat('Assistant', data.message, 'assistant');
+            } else {
+                console.error('Invalid assistant message received:', data);
+            }
+        });
+
+        // Monitor WebSocket connection
+        socket.on('connect', function() {
+            console.log("Connected to server.");
+        });
+
+        socket.on('disconnect', function() {
+            console.warn("Disconnected from server.");
+            addMessageToChat('System', 'Disconnected from server. Please refresh.', 'system');
+        });
+
+        // WebSocket connection errors
+        socket.on('connect_error', function(error) {
+            console.error("Connection error:", error);
+            addMessageToChat('System', 'Connection error. Please refresh the page.', 'system');
+        });
+    </script>
+</body>
+</html>

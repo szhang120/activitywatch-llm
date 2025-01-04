@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Memory</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Memory Management</h1>
+    </header>
+
+    <div id="memory-container">
+        <p class="info">The knowledge base is full. Remove entries to save new summaries.</p>
+        <hr>
+
+        <form action="{{ url_for('manage_memory_action') }}" method="POST">
+            <ul>
+                {% for row in knowledge_list %}
+                <li>
+                    <label>
+                        <input type="checkbox" name="delete_ids" value="{{ row[0] }}">
+                        {{ row[1] }}
+                    </label>
+                </li>
+                {% endfor %}
+            </ul>
+            <hr>
+            <button type="submit" name="action" value="save_delete" class="button">Delete & Save</button>
+            <button type="submit" name="action" value="never_mind" class="button">Cancel</button>
+        </form>
+    </div>
+</body>
+</html>
