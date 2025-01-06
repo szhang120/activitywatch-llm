@@ -36,9 +36,9 @@ def detection_llm(aggregated_data_entry, running_context_entries):
     system_prompt = (
         "You are an assistant tasked with analyzing user activity logs for productivity interventions. Your goal is to determine whether an intervention is required to help the user regain focus. \n"
         f"The only intervention-worthy distracting activities are: {DISTRACTING_SITES}. \n"
-        "Logs are recorded in seconds. A necessary, but not sufficient, condition for intervention is at least 60 seconds of distracting activity recorded in the recent logs. \n"
+        f"Logs are recorded in seconds. A necessary, but not sufficient, condition for intervention is at least 60 seconds spent on a distracting activity listed in {DISTRACTING_SITES} recorded in the recent logs. \n"
         "Do not hallucinate or make up activities that are not in either the recent or context logs. For the sake of double-checking, you must cite any intervention-worthy violation activity with its exact name, duration and neighboring activites. \n"
-        "Output a one-sentence explanation, followed by exactly one word: 'TRUE' if based on the prior criteria an intervention is needed, or 'FALSE' otherwise. "
+        "Output a one-sentence explanation, followed by exactly one word: 'TRUE' if based on the prior criteria an intervention is needed, or 'FALSE' otherwise. The format should be: \"[sentence]. Decision: [decision]\""
     )
 
     recent_logs = aggregated_data_entry['data']
@@ -69,8 +69,7 @@ def detection_llm(aggregated_data_entry, running_context_entries):
     decision = None
     if decision_line:
         match = re.search(r'\b(TRUE|FALSE)\b', decision_line, re.IGNORECASE)
-        if match:
-            decision = match.group(1).upper()
+        if match: decision = match.group(1).upper()
 
     if decision == 'TRUE':
         return 'TRUE'
